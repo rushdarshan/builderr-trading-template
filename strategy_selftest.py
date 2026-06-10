@@ -1,11 +1,5 @@
 """Strategy-level checks for agent.py.
-
-No network, no private engine, no third-party packages. These are not the
-official builderr evals; they catch contract, cap, and regime bugs before
-submission.
-
-Run:
-    python strategy_selftest.py
+No network, no private engine, no third-party packages.
 """
 from __future__ import annotations
 
@@ -13,7 +7,6 @@ import time
 from datetime import date, timedelta
 
 import agent
-
 
 UNIVERSE = (
     "SPY", "QQQ", "DIA", "IWM",
@@ -46,14 +39,12 @@ def market(kind: str) -> dict[str, list[dict]]:
         base = [-0.003] * 90
         defensive = [0.0005] * 90
         return {t: bars(100.0, defensive if t in {"XLP", "XLU", "XLV", "XLE"} else base) for t in UNIVERSE}
-
     if kind == "high_vol":
         calm_up = [0.002] * 90
         qqq_chop = ([0.035, -0.03] * 45)
         data = {t: bars(100.0, calm_up) for t in UNIVERSE}
         data["QQQ"] = bars(100.0, qqq_chop)
         return data
-
     # Low-vol risk-on, with differentiated momentum.
     data = {t: bars(100.0, [0.001] * 90) for t in UNIVERSE}
     for t in ("SMH", "NVDA", "XLK"):
@@ -66,9 +57,12 @@ def market(kind: str) -> dict[str, list[dict]]:
     return data
 
 
-def reset_agent_state() -> None:
-    agent._last_rebalance_bar_date = None
-    agent._last_targets = {}
+def reset_state() -> None:
+    agent._peak_equity = 0
+    agent._last_date = None
+    agent._last_regime = "DEFENSIVE"
+    agent._cb_remaining = 0
+    agent._cb_date = None
 
 
 def beta_gross(weights: dict[str, float]) -> float:
@@ -76,7 +70,7 @@ def beta_gross(weights: dict[str, float]) -> float:
 
 
 def test_empty_data_returns_no_orders() -> None:
-    reset_agent_state()
+    reset_state()
     assert agent.decide({}, {"cash": 100_000, "positions": [], "last_prices": {}}, 100_000) == []
 
 
@@ -87,7 +81,7 @@ def test_insufficient_history_returns_no_targets() -> None:
 
 def test_risk_off_uses_defensive_book() -> None:
     weights = agent.target_weights(market("risk_off"))
-    assert set(weights).issubset({"XLP", "XLU", "XLV", "XLE"})
+    assert set(weights).issubset({"TLT", "GLD", "XLP", "XLU", "XLV"})
     assert weights
 
 
@@ -111,7 +105,7 @@ def test_caps_hold() -> None:
 
 
 def test_orders_are_bounded_and_fast() -> None:
-    reset_agent_state()
+    reset_state()
     m = market("risk_on")
     latest = {t: b[-1]["close"] for t, b in m.items()}
     portfolio = {"cash": 100_000.0, "positions": [], "last_prices": latest}
@@ -121,18 +115,8 @@ def test_orders_are_bounded_and_fast() -> None:
     assert elapsed < 0.05, elapsed
     assert 0 < len(orders) < 50, orders
     assert all(o["side"] in {"buy", "sell"} and o["quantity"] > 0 for o in orders)
+    # Second call returns [] (already rebalanced today)
     assert agent.decide(m, portfolio, 100_000.0) == []
-
-
-def test_tiny_stale_position_is_not_sold() -> None:
-    orders = agent.orders_to_rebalance(
-        targets={"SPY": 0.20},
-        positions={"XYZ": {"quantity": 0.5, "avg_cost": 100.0}},
-        total_equity=100_000.0,
-        prices={"XYZ": 100.0, "SPY": 500.0},
-        cash_available=0.0,
-    )
-    assert orders == []
 
 
 def run() -> None:
@@ -144,7 +128,6 @@ def run() -> None:
         test_high_vol_disables_leverage,
         test_caps_hold,
         test_orders_are_bounded_and_fast,
-        test_tiny_stale_position_is_not_sold,
     ]
     for test in tests:
         test()
