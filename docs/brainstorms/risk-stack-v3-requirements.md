@@ -4,6 +4,7 @@
 **Shipped:** v1: Panic state gate (A) + Hard 8% DD cap (I) + HALF_RISK regime cap
             v2: Dynamic HALF_RISK split + HARD_CAP ordering fix
 **Status:** Submitted to submit@builderr.ai · all admission gates PASS for rev 2
+**SHA:** `7fce699` (pushed main Jun 11)
 
 ## Final preview metrics (submitted build)
 
