@@ -1,15 +1,16 @@
-"""Adaptive Calmar Shield v3 — Rev 3 (gross scaling + asymmetric confirmation).
+"""Adaptive Calmar Shield v4 — hard brake (staged, not submitted).
 
 Objective: maximise 60-day forward Calmar (annualised return / max drawdown).
 
-Revision 3 changes (Jun 2026):
+Revision 4 changes (Jun 2026, staged — awaiting live rev 3 data):
   1. Gross scaling by DD tiers (1.5%/2.5%/4% → 1.0/0.60/0.30/0.10) replaces
      regime-switch + dynamic split. Portfolio composition stays the same at all
      DD levels; total gross is scaled proportionally. Matches balaji (#1) design.
   2. Asymmetric regime confirmation: 2 consecutive ticks to enter risk-on,
-     1 tick to leave. Prevents whipsaw on marginal signal days.
+      1 tick to leave. Prevents whipsaw on marginal signal days.
   3. Name cap tightened 24% → 15%, drift limit raised 0.27 → 0.35
   4. Momentum calc skips last 5 bars (MOM_SKIP = 5) to avoid week-ending noise
+  5. Hard brake on QQQ: -2% 1d OR -4% 3d OR 10d vol > 40% → DEFENSIVE + 3-day cooldown
 
 Baseline (rev 1, merged from competitive research — Sankeerth, Balaji, Ajai, Zaid):
   - Tight drawdown governor: 2% → HALF_RISK, 4% → DEFENSIVE
@@ -72,6 +73,10 @@ MOM_SKIP = 5
 
 CB_THRESH = -0.025
 CB_COOLDOWN = 3
+BRAKE_1D = -0.02
+BRAKE_3D = -0.04
+BRAKE_VOL_10D = 0.40
+BRAKE_COOLDOWN = 3
 
 MOM_LONG = 60
 MOM_SHORT = 20
@@ -94,6 +99,8 @@ _cb_remaining: int = 0
 _cb_date: str | None = None
 _pending_regime: str | None = None
 _pending_regime_count: int = 0
+_brake_cooldown: int = 0
+_brake_cooldown_date: str | None = None
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -284,6 +291,17 @@ def _panic(ms: dict[str, list[dict[str, Any]]]) -> bool:
         return False
     return True
 
+# ── Hard brake (QQQ-driven, separate from SPY circuit breaker) ────────
+
+def _hard_brake(ms: dict[str, list[dict[str, Any]]]) -> bool:
+    qqq = _closes(ms.get("QQQ"))
+    if len(qqq) < 10:
+        return False
+    ret_1d = qqq[-1] / qqq[-2] - 1 if len(qqq) >= 2 else 0
+    ret_3d = qqq[-1] / qqq[-4] - 1 if len(qqq) >= 4 else 0
+    v10 = _rvol(qqq, 10) or 0
+    return ret_1d < BRAKE_1D or ret_3d < BRAKE_3D or v10 > BRAKE_VOL_10D
+
 # ── Regime detection ──────────────────────────────────────────────────
 
 def _regime(
@@ -291,6 +309,18 @@ def _regime(
     today: str,
 ) -> str:
     global _pending_regime, _pending_regime_count, _last_regime
+    global _brake_cooldown, _brake_cooldown_date
+
+    if _brake_cooldown > 0:
+        if today != _brake_cooldown_date:
+            _brake_cooldown -= 1
+            _brake_cooldown_date = today
+        return "DEFENSIVE"
+
+    if _hard_brake(ms):
+        _brake_cooldown = BRAKE_COOLDOWN
+        _brake_cooldown_date = today
+        return "DEFENSIVE"
 
     if _circuit_breaker(ms, today):
         return "DEFENSIVE"
