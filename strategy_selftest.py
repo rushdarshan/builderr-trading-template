@@ -115,7 +115,9 @@ def test_orders_are_bounded_and_fast() -> None:
     assert elapsed < 0.05, elapsed
     assert 0 < len(orders) < 50, orders
     assert all(o["side"] in {"buy", "sell"} and o["quantity"] > 0 for o in orders)
-    # Second call returns [] (already rebalanced today)
+    # Second call: regime may confirm (asymmetric 2-tick entry) → rebalance
+    agent.decide(m, portfolio, 100_000.0)
+    # Third call: already rebalanced today → nothing
     assert agent.decide(m, portfolio, 100_000.0) == []
 
 

@@ -1,11 +1,15 @@
-"""Adaptive Calmar Shield v3 — Rev 2 (dynamic HALF_RISK split + tighter CB).
+"""Adaptive Calmar Shield v3 — Rev 3 (gross scaling + asymmetric confirmation).
 
 Objective: maximise 60-day forward Calmar (annualised return / max drawdown).
 
-Revision 2 changes (Jun 2026):
-  1. Dynamic HALF_RISK split: momentum budget = 0.50 * (1 - dd/0.04),
-     gliding 50/50 → 25/75 at 2% DD → 0/100 at 4% DD (converges with DD_FULL governor)
-  2. HARD_CAP checked before vol-scale so cash-out is final word (ordering fix)
+Revision 3 changes (Jun 2026):
+  1. Gross scaling by DD tiers (1.5%/2.5%/4% → 1.0/0.60/0.30/0.10) replaces
+     regime-switch + dynamic split. Portfolio composition stays the same at all
+     DD levels; total gross is scaled proportionally. Matches balaji (#1) design.
+  2. Asymmetric regime confirmation: 2 consecutive ticks to enter risk-on,
+     1 tick to leave. Prevents whipsaw on marginal signal days.
+  3. Name cap tightened 24% → 15%, drift limit raised 0.27 → 0.35
+  4. Momentum calc skips last 5 bars (MOM_SKIP = 5) to avoid week-ending noise
 
 Baseline (rev 1, merged from competitive research — Sankeerth, Balaji, Ajai, Zaid):
   - Tight drawdown governor: 2% → HALF_RISK, 4% → DEFENSIVE
@@ -54,15 +58,18 @@ BETA_MULTIPLE = _BETA
 
 # ── Parameters ────────────────────────────────────────────────────────
 
-MAX_W = 0.24
-DRIFT_LIMIT = 0.27
+MAX_W = 0.15
+DRIFT_LIMIT = 0.35
 MAX_BETA_GROSS = 1.32
 MIN_TRADE_PCT = 0.025
 REBALANCE_EVERY = 7
 VOL_TARGET = 0.18
 
-DD_HALF = 0.02
-DD_FULL = 0.04
+DD_TIER_1 = 0.015
+DD_TIER_2 = 0.025
+DD_TIER_3 = 0.04
+MOM_SKIP = 5
+
 CB_THRESH = -0.025
 CB_COOLDOWN = 3
 
@@ -85,6 +92,8 @@ _last_date: str | None = None
 _last_regime: str = "DEFENSIVE"
 _cb_remaining: int = 0
 _cb_date: str | None = None
+_pending_regime: str | None = None
+_pending_regime_count: int = 0
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -106,10 +115,11 @@ def _rvol(prices: list[float], window: int) -> float | None:
         return None
     return pstdev(rets) * sqrt(252)
 
-def _mom(prices: list[float], window: int) -> float | None:
-    if len(prices) < window:
+def _mom(prices: list[float], window: int, skip: int = 0) -> float | None:
+    need = window + skip + 1
+    if len(prices) < need:
         return None
-    return prices[-1] / prices[-window] - 1
+    return prices[-(skip + 1)] / prices[-(window + skip + 1)] - 1
 
 def _breadth(ms: dict[str, list[dict[str, Any]]]) -> float:
     count = 0
@@ -278,16 +288,12 @@ def _panic(ms: dict[str, list[dict[str, Any]]]) -> bool:
 
 def _regime(
     ms: dict[str, list[dict[str, Any]]],
-    dd: float,
     today: str,
 ) -> str:
+    global _pending_regime, _pending_regime_count, _last_regime
+
     if _circuit_breaker(ms, today):
         return "DEFENSIVE"
-
-    if dd >= DD_FULL:
-        return "DEFENSIVE"
-    if dd >= DD_HALF:
-        return "HALF_RISK"
 
     spy = _closes(ms.get("SPY"))
     qqq = _closes(ms.get("QQQ"))
@@ -312,7 +318,17 @@ def _regime(
     score = sum(sigs)
 
     wanted = "HALF_RISK" if score >= 3 else "DEFENSIVE"
-    return wanted
+
+    if wanted == _pending_regime:
+        _pending_regime_count += 1
+    else:
+        _pending_regime = wanted
+        _pending_regime_count = 1
+
+    confirm = 2 if wanted == "HALF_RISK" else 1
+    if _pending_regime_count >= confirm:
+        return wanted
+    return _last_regime
 
 # ── Asset scoring ─────────────────────────────────────────────────────
 
@@ -321,8 +337,8 @@ def _score(t: str, ms: dict[str, list[dict[str, Any]]]) -> float | None:
     if len(cs) < MOM_LONG + 1:
         return None
 
-    m60 = _mom(cs, MOM_LONG)
-    m20 = _mom(cs, MOM_SHORT)
+    m60 = _mom(cs, MOM_LONG, MOM_SKIP)
+    m20 = _mom(cs, MOM_SHORT, MOM_SKIP)
     s50 = _sma(cs, 50)
     v20 = _rvol(cs, VOL_WIN)
     if None in (m60, m20, s50, v20):
@@ -331,7 +347,7 @@ def _score(t: str, ms: dict[str, list[dict[str, Any]]]) -> float | None:
         return None
 
     tg = cs[-1] / s50 - 1
-    spy_m20 = _mom(_closes(ms.get("SPY")), MOM_SHORT) or 0
+    spy_m20 = _mom(_closes(ms.get("SPY")), MOM_SHORT, MOM_SKIP) or 0
     rs = (m20 - spy_m20)
 
     raw = 0.50 * m60 + 0.25 * m20 + 0.15 * tg + 0.10 * rs
@@ -339,7 +355,16 @@ def _score(t: str, ms: dict[str, list[dict[str, Any]]]) -> float | None:
 
 # ── Weight construction ───────────────────────────────────────────────
 
-def _targets(ms: dict[str, list[dict[str, Any]]], reg: str, dd: float = 0.0) -> dict[str, float]:
+def _gross_scale(dd: float) -> float:
+    if dd < DD_TIER_1:
+        return 1.0
+    if dd < DD_TIER_2:
+        return 0.60
+    if dd < DD_TIER_3:
+        return 0.30
+    return 0.10
+
+def _targets(ms: dict[str, list[dict[str, Any]]], reg: str) -> dict[str, float]:
     spy = _closes(ms.get("SPY"))
     if len(spy) < 50:
         return {}
@@ -354,12 +379,11 @@ def _targets(ms: dict[str, list[dict[str, Any]]], reg: str, dd: float = 0.0) -> 
     scored.sort(reverse=True)
 
     if reg == "HALF_RISK":
-        mom_frac = 0.50 * max(0.0, 1.0 - dd / (2.0 * DD_HALF))
-        mom_w = _inv_vol_weights(scored, ms, 4, mom_frac)
+        mom_w = _inv_vol_weights(scored, ms, 4, 0.50)
         def_w = _defensive_weights(ms)
         total_def = sum(def_w.values()) or 1
         for t, w in def_w.items():
-            mom_w[t] = mom_w.get(t, 0) + w / total_def * (1.0 - mom_frac)
+            mom_w[t] = mom_w.get(t, 0) + w / total_def * 0.50
         return _cap(_port_vol_scale(mom_w, ms))
 
     return {}
@@ -422,7 +446,7 @@ def target_weights(ms):
     spy = _closes(ms.get("SPY"))
     spy50 = _sma(spy, 50) if len(spy) >= 50 else None
     risk_on = bool(spy50 is not None and spy[-1] > spy50)
-    return _targets(ms, "HALF_RISK" if risk_on else "DEFENSIVE", dd=0.0)
+    return _targets(ms, "HALF_RISK" if risk_on else "DEFENSIVE")
 
 # ── Entry point ───────────────────────────────────────────────────────
 
@@ -432,6 +456,7 @@ def decide(
     cash: float,
 ) -> list[dict]:
     global _peak_equity, _last_date, _last_regime
+    global _pending_regime, _pending_regime_count
 
     if not market_state:
         return []
@@ -459,7 +484,7 @@ def decide(
     if _panic(market_state):
         reg = "DEFENSIVE"
     else:
-        reg = _regime(market_state, dd, today)
+        reg = _regime(market_state, today)
 
     days = _days_since(market_state)
     drift = _drifted(portfolio_state, eq)
@@ -475,7 +500,7 @@ def decide(
     if not should:
         return []
 
-    tgts = _targets(market_state, reg, dd)
+    tgts = _targets(market_state, reg)
 
     if not tgts:
         pos = _positions(portfolio_state)
@@ -488,6 +513,10 @@ def decide(
         _last_date = today
         _last_regime = reg
         return liq[:45]
+
+    # Apply gross scale by DD tiers (proportional, not regime-switching)
+    gs = _gross_scale(dd)
+    tgts = {t: w * gs for t, w in tgts.items()}
 
     # I: Hard DD cap — override to defensive if drawdown exceeds 8%
     #     Must run BEFORE vol-scale so cash-out (vol_scale=0) is final word.

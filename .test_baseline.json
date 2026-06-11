@@ -1,0 +1,500 @@
+{
+  "timestamp": "2026-06-11T23:42:42",
+  "agents": {
+    "agent": {
+      "calm_uptrend": {
+        "ret": 0.08413177991800036,
+        "mdd": 0.014018571482409373,
+        "calmar": 26.71251401675801,
+        "trades": 35,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.039363350512999884,
+        "mdd": 0.0448528978343281,
+        "calmar": -6.209688405997119,
+        "trades": 25,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.02341514822300017,
+        "mdd": 0.03263884878085418,
+        "calmar": -3.4486938236546494,
+        "trades": 15,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "baseline": {
+      "calm_uptrend": {
+        "ret": 0.12364349875700009,
+        "mdd": 0.022963324501975725,
+        "calmar": 25.36751530002275,
+        "trades": 4,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.03720280491422023,
+        "mdd": 0.06888624491833865,
+        "calmar": -3.8501974328937454,
+        "trades": 4,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.08206451191450004,
+        "mdd": 0.29865879591450006,
+        "calmar": -1.173609414708162,
+        "trades": 4,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "momentum_v1": {
+      "calm_uptrend": {
+        "ret": 0.2217768601504999,
+        "mdd": 0.041766208509121015,
+        "calmar": 28.744450082766946,
+        "trades": 7,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.05566993548550003,
+        "mdd": 0.10846369076136332,
+        "calmar": -3.4321043144626207,
+        "trades": 7,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.10845241745549983,
+        "mdd": 0.34368324245549986,
+        "calmar": -1.2782199138296744,
+        "trades": 7,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "seed_dual_momentum": {
+      "calm_uptrend": {
+        "ret": 0.031046027817434707,
+        "mdd": 0.038056693250364974,
+        "calmar": 3.3615765316641144,
+        "trades": 5,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.0324569734500183,
+        "mdd": 0.06371511652987669,
+        "calmar": -3.6923873245421994,
+        "trades": 5,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.09611407289149998,
+        "mdd": 0.3164971858915,
+        "calmar": -1.2609449252693243,
+        "trades": 5,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "ai_momentum": {
+      "calm_uptrend": {
+        "ret": 0.15362800410001753,
+        "mdd": 0.02648376120606328,
+        "calmar": 28.524352839628804,
+        "trades": 8,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.05433683640931197,
+        "mdd": 0.10051320972101493,
+        "calmar": -3.631548589846045,
+        "trades": 9,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.1151524608463187,
+        "mdd": 0.3349536564610094,
+        "calmar": -1.373980429766664,
+        "trades": 9,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "ajai_agent": {
+      "calm_uptrend": {
+        "ret": 0.10084131553200026,
+        "mdd": 0.02323710639973738,
+        "calmar": 19.786988792332014,
+        "trades": 73,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.04040210971749936,
+        "mdd": 0.0715458516079995,
+        "calmar": -3.9812231383042276,
+        "trades": 50,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.09635912978099948,
+        "mdd": 0.2582734757424997,
+        "calmar": -1.5483826612463416,
+        "trades": 64,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "arnav_agent": {
+      "calm_uptrend": {
+        "ret": 0.10479805251200047,
+        "mdd": 0.03879756445538137,
+        "calmar": 12.386380273565077,
+        "trades": 92,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.043851573032000046,
+        "mdd": 0.05237075686323721,
+        "calmar": -5.832876636093063,
+        "trades": 23,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.09376711614,
+        "mdd": 0.1020982856015001,
+        "calmar": -3.8314093510741274,
+        "trades": 26,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "balaji_agent": {
+      "calm_uptrend": {
+        "ret": 0.09701813526850023,
+        "mdd": 0.02199976593725227,
+        "calmar": 19.997104113527197,
+        "trades": 65,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.028746697242000074,
+        "mdd": 0.0400787469333109,
+        "calmar": -5.266967665354438,
+        "trades": 37,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.07747540096199979,
+        "mdd": 0.08385228896199988,
+        "calmar": -3.9829265602451414,
+        "trades": 10,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "harsimran_agent": {
+      "calm_uptrend": {
+        "ret": 0.06364034941553154,
+        "mdd": 0.023292404152790134,
+        "calmar": 11.80571266381702,
+        "trades": 85,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.05237977158587481,
+        "mdd": 0.07163316918460798,
+        "calmar": -4.945433505376287,
+        "trades": 31,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.059875740168499725,
+        "mdd": 0.10291299883949978,
+        "calmar": -2.5985276696027055,
+        "trades": 14,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "mohit_agent": {
+      "calm_uptrend": {
+        "ret": 0.17196074845550058,
+        "mdd": 0.03320393158674735,
+        "calmar": 26.13737987396082,
+        "trades": 41,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.06760941899549933,
+        "mdd": 0.08761941432290854,
+        "calmar": -4.952589580318744,
+        "trades": 53,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.11018544350999993,
+        "mdd": 0.2508037491679999,
+        "calmar": -1.7733959912572357,
+        "trades": 18,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "nagarjuna_agent": {
+      "calm_uptrend": {
+        "ret": 0.08507096939350123,
+        "mdd": 0.029990620556499318,
+        "calmar": 12.642808932052048,
+        "trades": 64,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.01954146641099941,
+        "mdd": 0.04725612852913094,
+        "calmar": -3.136503543982038,
+        "trades": 16,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.14529852627299955,
+        "mdd": 0.32461463306349964,
+        "calmar": -1.684282247689321,
+        "trades": 21,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "opu_agent": {
+      "calm_uptrend": {
+        "ret": 0.059478049338500094,
+        "mdd": 0.06067029922864586,
+        "calmar": 4.210470957019021,
+        "trades": 24,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.031075442978499623,
+        "mdd": 0.07796229314401484,
+        "calmar": -2.9031863629691084,
+        "trades": 10,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.07162784287099977,
+        "mdd": 0.26994510733099975,
+        "calmar": -1.1573687887258897,
+        "trades": 16,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "robert_agent": {
+      "calm_uptrend": {
+        "ret": 0.13010651920250016,
+        "mdd": 0.030109337516964898,
+        "calmar": 20.547352605426724,
+        "trades": 29,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.04094109533749968,
+        "mdd": 0.0565233821577835,
+        "calmar": -5.096984830169236,
+        "trades": 20,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.06125854409399967,
+        "mdd": 0.1339298383059999,
+        "calmar": -2.037162996077091,
+        "trades": 29,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "rohit_agent": {
+      "calm_uptrend": {
+        "ret": 0.08939336475900017,
+        "mdd": 0.02816092710863022,
+        "calmar": 14.236921558575299,
+        "trades": 34,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.06751643860349954,
+        "mdd": 0.0793822341575735,
+        "calmar": -5.4607175882581735,
+        "trades": 25,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.061421693168999925,
+        "mdd": 0.06697088916899986,
+        "calmar": -4.083470207648744,
+        "trades": 15,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "sankeerth_agent": {
+      "calm_uptrend": {
+        "ret": 0.10226989000850017,
+        "mdd": 0.02030431795382265,
+        "calmar": 23.013122251889534,
+        "trades": 35,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.027557930989499768,
+        "mdd": 0.041001732027121346,
+        "calmar": -4.956129170826246,
+        "trades": 34,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.014244947276999875,
+        "mdd": 0.05369732121436846,
+        "calmar": -1.2991014155785263,
+        "trades": 10,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "shyam_agent": {
+      "calm_uptrend": {
+        "ret": 0.022096628611500302,
+        "mdd": 0.015161220868719983,
+        "calmar": 5.92760263522845,
+        "trades": 2,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.015881850626000116,
+        "mdd": 0.03170285157942406,
+        "calmar": -3.8491089197982187,
+        "trades": 2,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.05214900378249998,
+        "mdd": 0.15460480096925175,
+        "calmar": -1.5301511100667964,
+        "trades": 8,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "siddu_agent": {
+      "calm_uptrend": {
+        "ret": 0.21006608979499997,
+        "mdd": 0.0396785967476754,
+        "calmar": 28.192975201988443,
+        "trades": 47,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.05645072046549959,
+        "mdd": 0.0672547411256527,
+        "calmar": -5.597604756748246,
+        "trades": 31,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.04201225149599963,
+        "mdd": 0.0703030364959997,
+        "calmar": -2.7668945816930286,
+        "trades": 17,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "sumegh_agent": {
+      "calm_uptrend": {
+        "ret": 0.0931674774735003,
+        "mdd": 0.04809419797186665,
+        "calmar": 8.73561884927911,
+        "trades": 8,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": -0.027481000078999784,
+        "mdd": 0.03547691840033337,
+        "calmar": -5.713498579679424,
+        "trades": 4,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.09795241274799982,
+        "mdd": 0.13213787782149972,
+        "calmar": -3.0666445852705566,
+        "trades": 16,
+        "errors": 0,
+        "days": 50
+      }
+    },
+    "test_walkforward": {},
+    "zaid_agent": {
+      "calm_uptrend": {
+        "ret": 0.053261169598999514,
+        "mdd": 0.037798403037186554,
+        "calmar": 5.997415370997058,
+        "trades": 117,
+        "errors": 0,
+        "days": 64
+      },
+      "moderate_selloff": {
+        "ret": 0.006633554538000075,
+        "mdd": 0.009428197043091443,
+        "calmar": 5.8565673517389385,
+        "trades": 19,
+        "errors": 0,
+        "days": 31
+      },
+      "vol_spike_snapback": {
+        "ret": -0.024126292152999995,
+        "mdd": 0.04220675900799994,
+        "calmar": -2.7439585795689405,
+        "trades": 28,
+        "errors": 0,
+        "days": 50
+      }
+    }
+  }
+}
