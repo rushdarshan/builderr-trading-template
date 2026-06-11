@@ -373,7 +373,7 @@ def _score(t: str, ms: dict[str, list[dict[str, Any]]]) -> float | None:
     v20 = _rvol(cs, VOL_WIN)
     if None in (m60, m20, s50, v20):
         return None
-    if m60 < -0.03:
+    if m60 < 0:
         return None
 
     tg = cs[-1] / s50 - 1
