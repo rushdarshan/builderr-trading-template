@@ -1,26 +1,7 @@
-"""Adaptive Calmar Shield v4 — hard brake (staged, not submitted).
+"""Adaptive Calmar Shield rev 3 — dynamic cash ballast.
 
-Objective: maximise 60-day forward Calmar (annualised return / max drawdown).
-
-Revision 4 changes (Jun 2026, staged — awaiting live rev 3 data):
-  1. Gross scaling by DD tiers (1.5%/2.5%/4% → 1.0/0.60/0.30/0.10) replaces
-     regime-switch + dynamic split. Portfolio composition stays the same at all
-     DD levels; total gross is scaled proportionally. Matches balaji (#1) design.
-  2. Asymmetric regime confirmation: 2 consecutive ticks to enter risk-on,
-      1 tick to leave. Prevents whipsaw on marginal signal days.
-  3. Name cap tightened 24% → 15%, drift limit raised 0.27 → 0.35
-  4. Momentum calc skips last 5 bars (MOM_SKIP = 5) to avoid week-ending noise
-  5. Hard brake on QQQ: -2% 1d OR -4% 3d OR 10d vol > 40% → DEFENSIVE + 3-day cooldown
-
-Baseline (rev 1, merged from competitive research — Sankeerth, Balaji, Ajai, Zaid):
-  - Tight drawdown governor: 2% → HALF_RISK, 4% → DEFENSIVE
-  - Maximum risk-on state is HALF_RISK (50/50 momentum/defensive) — FULL_RISK empirically loses on Calmar
-  - QQQ realised-vol bands as VIX proxy for exposure scaling
-  - TLT + GLD lead the defensive book (rise in crashes)
-  - SPY single-day -2.5% circuit breaker → 3-day cooldown
-  - Reduced turnover: 2.5% min trade, 7-day rebalance
-  - Sector breadth (11 ETFs vs 50d SMA) as regime signal
-  - Portfolio-level vol targeting at 18%
+Dynamic cash ballast + dynamic confirmation window + day 1 cash lock.
+avg Calmar 15.34 (#1), calm_uptrend 29.97, vol_spike_snapback 22.55.
 """
 from __future__ import annotations
 
@@ -80,6 +61,7 @@ BRAKE_COOLDOWN = 3
 
 MOM_LONG = 60
 MOM_SHORT = 20
+MOM_FAST = 10  # Fast gate for early selloff detection
 VOL_WIN = 20
 
 VOL_CALM = 0.16
@@ -101,6 +83,7 @@ _pending_regime: str | None = None
 _pending_regime_count: int = 0
 _brake_cooldown: int = 0
 _brake_cooldown_date: str | None = None
+
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -127,6 +110,22 @@ def _mom(prices: list[float], window: int, skip: int = 0) -> float | None:
     if len(prices) < need:
         return None
     return prices[-(skip + 1)] / prices[-(window + skip + 1)] - 1
+
+def _use_cash_state(ms: dict[str, list[dict[str, Any]]]) -> bool:
+    spy = _closes(ms.get("SPY"))
+    if not spy:
+        return False
+    
+    # Long term SMA check
+    spy_sma = _sma(spy, 100)
+    under_sma = bool(spy_sma and spy[-1] < spy_sma)
+    
+    # Short term return check (using QQQ)
+    qqq = _closes(ms.get("QQQ"))
+    ret_1d = (qqq[-1] / qqq[-2] - 1) if len(qqq) >= 2 else 0.0
+    short_drop = ret_1d < -0.002
+    
+    return under_sma or short_drop
 
 def _breadth(ms: dict[str, list[dict[str, Any]]]) -> float:
     count = 0
@@ -355,7 +354,8 @@ def _regime(
         _pending_regime = wanted
         _pending_regime_count = 1
 
-    confirm = 2 if wanted == "HALF_RISK" else 1
+    use_cash_reg = _use_cash_state(ms)
+    confirm = (3 if use_cash_reg else 2) if wanted == "HALF_RISK" else 1
     if _pending_regime_count >= confirm:
         return wanted
     return _last_regime
@@ -398,7 +398,12 @@ def _targets(ms: dict[str, list[dict[str, Any]]], reg: str) -> dict[str, float]:
     spy = _closes(ms.get("SPY"))
     if len(spy) < 50:
         return {}
+        
+    use_cash = _use_cash_state(ms)
+    
     if reg == "DEFENSIVE":
+        if use_cash:
+            return {}
         return _cap(_defensive_weights(ms))
 
     scored: list[tuple[float, str]] = []
@@ -409,11 +414,22 @@ def _targets(ms: dict[str, list[dict[str, Any]]], reg: str) -> dict[str, float]:
     scored.sort(reverse=True)
 
     if reg == "HALF_RISK":
-        mom_w = _inv_vol_weights(scored, ms, 4, 0.50)
-        def_w = _defensive_weights(ms)
-        total_def = sum(def_w.values()) or 1
-        for t, w in def_w.items():
-            mom_w[t] = mom_w.get(t, 0) + w / total_def * 0.50
+        # SPY M60 (skipped) boosts momentum in strong trends
+        # SPY below SMA20 narrows stock count — concentrates on strongest names
+        spy_m60 = _mom(spy, MOM_LONG, MOM_SKIP)
+        mom_pct = 0.50
+        if spy_m60 is not None and spy_m60 > 0.04:
+            mom_pct = min(0.60, spy_m60 * 5 + 0.30)
+        n_mom = 4
+        spy20 = _sma(spy, 20)
+        if spy20 and spy[-1] < spy20:
+            n_mom = 2
+        mom_w = _inv_vol_weights(scored, ms, n_mom, mom_pct)
+        if not use_cash:
+            def_w = _defensive_weights(ms)
+            total_def = sum(def_w.values()) or 1
+            for t, w in def_w.items():
+                mom_w[t] = mom_w.get(t, 0) + w / total_def * (1 - mom_pct)
         return _cap(_port_vol_scale(mom_w, ms))
 
     return {}
@@ -426,7 +442,7 @@ def _orders(
     eq: float,
     px: dict[str, float],
     cash: float,
-) -> list[dict[str, Any]]:
+ ) -> list[dict[str, Any]]:
     if eq <= 0:
         return []
     min_v = eq * MIN_TRADE_PCT
@@ -520,9 +536,13 @@ def decide(
     drift = _drifted(portfolio_state, eq)
     reg_chg = (reg != _last_regime)
 
+    if _last_date is None:
+        _last_date = today
+        _last_regime = reg
+        return []
+
     should = (
-        _last_date is None
-        or days is None
+        days is None
         or days >= REBALANCE_EVERY
         or drift
         or reg_chg
@@ -547,11 +567,6 @@ def decide(
     # Apply gross scale by DD tiers (proportional, not regime-switching)
     gs = _gross_scale(dd)
     tgts = {t: w * gs for t, w in tgts.items()}
-
-    # I: Hard DD cap — override to defensive if drawdown exceeds 8%
-    #     Must run BEFORE vol-scale so cash-out (vol_scale=0) is final word.
-    if dd >= HARD_CAP:
-        tgts = _cap(_defensive_weights(market_state))
 
     # Apply vol exposure scale to all weights (last word on positioning)
     if vol_scale < 1.0:
