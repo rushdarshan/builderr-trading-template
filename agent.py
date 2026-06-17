@@ -1,7 +1,7 @@
-"""Adaptive Calmar Shield rev 3 — dynamic cash ballast.
+"""Adaptive Calmar Shield rev 4 — no cash trap + fast re-entry.
 
-Dynamic cash ballast + dynamic confirmation window + day 1 cash lock.
-avg Calmar 15.34 (#1), calm_uptrend 29.97, vol_spike_snapback 22.55.
+Rev 4 fix: never go 100% cash in DEFENSIVE (hold 35% defensive).
+Reduce re-entry from 3d to 1d. Raise QQQ 1d threshold -0.002 → -0.01.
 """
 from __future__ import annotations
 
@@ -40,11 +40,11 @@ BETA_MULTIPLE = _BETA
 
 # ── Parameters ────────────────────────────────────────────────────────
 
-MAX_W = 0.15
-DRIFT_LIMIT = 0.35
+MAX_W = 0.18
+DRIFT_LIMIT = 0.27
 MAX_BETA_GROSS = 1.32
 MIN_TRADE_PCT = 0.025
-REBALANCE_EVERY = 7
+REBALANCE_EVERY = 5
 VOL_TARGET = 0.18
 
 DD_TIER_1 = 0.015
@@ -123,7 +123,7 @@ def _use_cash_state(ms: dict[str, list[dict[str, Any]]]) -> bool:
     # Short term return check (using QQQ)
     qqq = _closes(ms.get("QQQ"))
     ret_1d = (qqq[-1] / qqq[-2] - 1) if len(qqq) >= 2 else 0.0
-    short_drop = ret_1d < -0.002
+    short_drop = ret_1d < -0.01
     
     return under_sma or short_drop
 
@@ -355,7 +355,7 @@ def _regime(
         _pending_regime_count = 1
 
     use_cash_reg = _use_cash_state(ms)
-    confirm = (3 if use_cash_reg else 2) if wanted == "HALF_RISK" else 1
+    confirm = (1 if use_cash_reg else 1) if wanted == "HALF_RISK" else 1
     if _pending_regime_count >= confirm:
         return wanted
     return _last_regime
@@ -403,7 +403,7 @@ def _targets(ms: dict[str, list[dict[str, Any]]], reg: str) -> dict[str, float]:
     
     if reg == "DEFENSIVE":
         if use_cash:
-            return {}
+            return _cap({t: w * 0.35 for t, w in _defensive_weights(ms).items()})
         return _cap(_defensive_weights(ms))
 
     scored: list[tuple[float, str]] = []
